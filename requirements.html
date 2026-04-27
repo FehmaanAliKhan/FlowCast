@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FlowCast — Core Requirements Document</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 860px; margin: 40px auto; padding: 0 32px 60px; color: #1a1a2e; line-height: 1.6; }
+    h1 { font-size: 26px; color: #1a1a2e; border-bottom: 3px solid #7B61FF; padding-bottom: 10px; margin-bottom: 4px; }
+    h2 { font-size: 18px; color: #7B61FF; margin-top: 36px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+    h3 { font-size: 14px; color: #374151; margin-top: 20px; margin-bottom: 6px; }
+    .meta { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+    .meta span { margin-right: 24px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 16px; }
+    th { background: #f3f0ff; color: #5b21b6; font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; }
+    td { padding: 7px 12px; border: 1px solid #e2e8f0; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafafa; }
+    .badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .done { background: #d1fae5; color: #065f46; }
+    p { font-size: 14px; color: #374151; }
+    ul { font-size: 14px; color: #374151; padding-left: 20px; }
+    li { margin-bottom: 4px; }
+    .section-intro { font-size: 14px; color: #6b7280; margin-bottom: 12px; }
+    @media print {
+      body { margin: 20px; padding: 0; }
+      h2 { page-break-after: avoid; }
+      table { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>FlowCast — Core Requirements Document</h1>
+<div class="meta">
+  <span><strong>Application:</strong> FlowCast</span>
+  <span><strong>Type:</strong> Personal Finance Management Web App</span><br/><br/>
+  <span><strong>Live URL:</strong> https://fehmaanalikhan.github.io/FlowCast</span>
+  <span><strong>Repository:</strong> https://github.com/FehmaanAliKhan/FlowCast</span>
+</div>
+
+<h2>1. Project Overview</h2>
+<p>FlowCast allows users to track income and expenses, forecast future cash flow, run what-if financial scenarios, and set savings goals — all with secure per-user authentication and cloud-synced data persistence.</p>
+
+<h2>2. Functional Requirements</h2>
+
+<h3>2.1 Authentication</h3>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>AUTH-1</td><td>Users can register with an email and password</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>AUTH-2</td><td>Users can log in and receive a JWT session token</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>AUTH-3</td><td>Sessions persist across browser refreshes via localStorage</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>AUTH-4</td><td>Users can sign out, which clears the session token</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>AUTH-5</td><td>Password must be 12–16 characters with uppercase, lowercase, number, and symbol</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>AUTH-6</td><td>Users can change their password from the Settings page</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>AUTH-7</td><td>Expired or invalid tokens automatically redirect to the login screen</td><td><span class="badge done">✅ Implemented</span></td></tr>
+</table>
+
+<h3>2.2 Transaction Tracking</h3>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>TXN-1</td><td>Users can add income and expense transactions</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>TXN-2</td><td>Each transaction has a date, description, amount, and category</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>TXN-3</td><td>Users can edit and delete existing transactions</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>TXN-4</td><td>Transactions are displayed in a searchable, filterable list</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>TXN-5</td><td>Categories are displayed with colour-coded icons</td><td><span class="badge done">✅ Implemented</span></td></tr>
+</table>
+
+<h3>2.3 Recurring Rules</h3>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>REC-1</td><td>Users can define recurring income or expense rules</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>REC-2</td><td>Rules support daily, weekly, monthly, and yearly frequencies</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>REC-3</td><td>Rules can be toggled active/inactive without deleting them</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>REC-4</td><td>Active recurring rules are projected into the forecast engine</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>REC-5</td><td>Upcoming bills within 30 days are surfaced on the dashboard</td><td><span class="badge done">✅ Implemented</span></td></tr>
+</table>
+
+<h3>2.4 Cash Flow Forecasting</h3>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>FORE-1</td><td>The app projects future balance based on transactions and recurring rules</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>FORE-2</td><td>Forecast horizon can be set to 3M, 6M, 1Y, or 2Y</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>FORE-3</td><td>A line chart visualises the projected balance over time</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>FORE-4</td><td>A bar chart shows monthly income vs expenses</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>FORE-5</td><td>Monte Carlo simulation can be toggled on the forecast chart</td><td><span class="badge done">✅ Implemented</span></td></tr>
+</table>
+
+<h3>2.5 Scenario Planning</h3>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>SCE-1</td><td>Users can create named what-if scenarios</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SCE-2</td><td>Scenarios can override recurring rule amounts or add new rules</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SCE-3</td><td>Multiple scenarios can be overlaid on the forecast chart</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SCE-4</td><td>A baseline scenario is always present and cannot be deleted</td><td><span class="badge done">✅ Implemented</span></td></tr>
+</table>
+
+<h3>2.6 Savings Goals</h3>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>GOA-1</td><td>Users can create savings goals with a target amount and deadline</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>GOA-2</td><td>Progress towards each goal is shown with a progress bar</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>GOA-3</td><td>Goals are displayed on the dashboard summary</td><td><span class="badge done">✅ Implemented</span></td></tr>
+</table>
+
+<h3>2.7 Dashboard</h3>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>DSH-1</td><td>Dashboard shows total balance, income, expenses, and net cash flow</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>DSH-2</td><td>KPI cards display month-over-month percentage changes</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>DSH-3</td><td>Cash runway (days until balance hits $0) is displayed</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>DSH-4</td><td>A financial health score is calculated from savings rate and runway</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>DSH-5</td><td>Quick action buttons provide fast navigation to key features</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>DSH-6</td><td>A global search overlay searches across all data and pages</td><td><span class="badge done">✅ Implemented</span></td></tr>
+</table>
+
+<h3>2.8 Settings</h3>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>SET-1</td><td>Users can set a starting balance and as-of date</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SET-2</td><td>Users can set a default forecast horizon</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SET-3</td><td>Users can toggle between light, dark, and system themes</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SET-4</td><td>Users can export their data as a JSON file</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SET-5</td><td>Users can import data from a previously exported JSON file</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SET-6</td><td>Users can reset all data with a confirmation modal</td><td><span class="badge done">✅ Implemented</span></td></tr>
+  <tr><td>SET-7</td><td>Users can change their password</td><td><span class="badge done">✅ Implemented</span></td></tr>
+</table>
+
+<h2>3. Non-Functional Requirements</h2>
+<table>
+  <tr><th>ID</th><th>Requirement</th><th>Status</th></tr>
+  <tr><td>NFR-1</td><td>The app must be accessible via a public URL</td><td><span class="badge done">✅ GitHub Pages</span></td></tr>
+  <tr><td>NFR-2</td><td>Data must persist between sessions</td><td><span class="badge done">✅ PostgreSQL via Supabase</span></td></tr>
+  <tr><td>NFR-3</td><td>The app must be responsive on desktop and mobile</td><td><span class="badge done">✅ Tailwind responsive classes</span></td></tr>
+  <tr><td>NFR-4</td><td>No paid third-party APIs</td><td><span class="badge done">✅ All free services</span></td></tr>
+  <tr><td>NFR-5</td><td>Passwords must be stored securely</td><td><span class="badge done">✅ bcrypt (rounds=10)</span></td></tr>
+  <tr><td>NFR-6</td><td>API routes must be protected with authentication</td><td><span class="badge done">✅ JWT middleware</span></td></tr>
+  <tr><td>NFR-7</td><td>Rate limiting must be applied to auth endpoints</td><td><span class="badge done">✅ 20 req / 15 min</span></td></tr>
+</table>
+
+<h2>4. Technical Constraints</h2>
+<ul>
+  <li>No Node.js build step — frontend must run as static files</li>
+  <li>Backend must support both SQLite (local) and PostgreSQL (production) without code changes</li>
+  <li>Frontend and backend are hosted on separate domains — CORS must be configured</li>
+  <li>All monetary values stored as integer cents to avoid floating-point errors</li>
+</ul>
+
+<h2>5. Out of Scope</h2>
+<ul>
+  <li>Email verification on registration</li>
+  <li>Forgot password / password reset via email</li>
+  <li>Multi-currency support</li>
+  <li>Bank account integrations / CSV import</li>
+  <li>Mobile native app</li>
+</ul>
+
+</body>
+</html>

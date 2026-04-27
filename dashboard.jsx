@@ -35,6 +35,100 @@ function DeltaBadge({ value, suffix = '' }) {
   );
 }
 
+// ─── Global search overlay ────────────────────────────────────────────────────
+
+function SearchOverlay({ open, onClose }) {
+  const { state, dispatch } = useStore();
+  const { transactions, recurringRules, scenarios, goals } = state;
+  const [query, setQuery] = useState('');
+  const inputRef = useRef(null);
+  const [selected, setSelected] = useState(0);
+
+  useEffect(() => {
+    if (open) { setQuery(''); setSelected(0); setTimeout(() => inputRef.current?.focus(), 50); }
+  }, [open]);
+
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const q = query.toLowerCase().trim();
+
+  const results = q.length < 1 ? [] : [
+    ...transactions.filter(t => (t.description||'').toLowerCase().includes(q) || (t.category||'').toLowerCase().includes(q))
+      .slice(0, 4).map(t => ({ label: t.description, sub: Money.format(t.amountCents), screen: 'transactions', icon: '↕' })),
+    ...recurringRules.filter(r => (r.name||'').toLowerCase().includes(q))
+      .slice(0, 3).map(r => ({ label: r.name, sub: Money.format(r.amountCents) + ' / ' + r.frequency, screen: 'recurring', icon: '↻' })),
+    ...scenarios.filter(s => (s.name||'').toLowerCase().includes(q))
+      .slice(0, 3).map(s => ({ label: s.name, sub: 'Scenario', screen: 'scenarios', icon: '⎇' })),
+    ...goals.filter(g => (g.name||'').toLowerCase().includes(q))
+      .slice(0, 3).map(g => ({ label: g.name, sub: 'Goal', screen: 'goals', icon: '◎' })),
+    { label: 'Transactions', sub: 'Go to page', screen: 'transactions', icon: '→' },
+    { label: 'Recurring', sub: 'Go to page', screen: 'recurring', icon: '→' },
+    { label: 'Scenarios', sub: 'Go to page', screen: 'scenarios', icon: '→' },
+    { label: 'Goals', sub: 'Go to page', screen: 'goals', icon: '→' },
+    { label: 'Settings', sub: 'Go to page', screen: 'settings', icon: '→' },
+  ].filter((r, i, arr) => q.length > 0 || r.icon === '→')
+   .filter(r => r.icon === '→' ? r.label.toLowerCase().includes(q) : true);
+
+  function go(item) {
+    dispatch({ type: 'NAV', screen: item.screen });
+    onClose();
+  }
+
+  function handleKey(e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, results.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)); }
+    else if (e.key === 'Enter' && results[selected]) go(results[selected]);
+  }
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center pt-24 px-4"
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}>
+      <div className="w-full max-w-lg" onClick={e => e.stopPropagation()}>
+        <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--card-bg)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3 px-4 py-3.5" style={{ borderBottom: results.length ? '1px solid var(--border)' : 'none' }}>
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+              <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M12.5 12.5L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <input ref={inputRef} value={query} onChange={e => { setQuery(e.target.value); setSelected(0); }}
+              onKeyDown={handleKey} placeholder="Search transactions, goals, scenarios…"
+              className="flex-1 bg-transparent outline-none text-sm"
+              style={{ color: 'var(--text-1)' }} />
+            <kbd className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--chip-bg)', color: 'var(--text-3)' }}>ESC</kbd>
+          </div>
+          {results.length > 0 && (
+            <div className="max-h-80 overflow-y-auto py-1">
+              {results.map((r, i) => (
+                <button key={i} onClick={() => go(r)}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                  style={{ backgroundColor: i === selected ? 'var(--hover-bg)' : 'transparent' }}
+                  onMouseEnter={() => setSelected(i)}>
+                  <span className="w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0"
+                    style={{ backgroundColor: 'var(--chip-bg)', color: '#7B61FF' }}>{r.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>{r.label}</p>
+                    <p className="text-xs truncate" style={{ color: 'var(--text-3)' }}>{r.sub}</p>
+                  </div>
+                  <span className="text-xs shrink-0" style={{ color: 'var(--text-4)' }}>{r.screen}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {q.length > 0 && results.length === 0 && (
+            <div className="px-4 py-8 text-center text-sm" style={{ color: 'var(--text-3)' }}>No results for "{query}"</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dashboard header ─────────────────────────────────────────────────────────
 
 function DashHeader() {
@@ -42,6 +136,7 @@ function DashHeader() {
   const { settings, recurringRules } = state;
   const user = Api.getUser();
   const initial = user ? user.email[0].toUpperCase() : 'FC';
+  const [searchOpen, setSearchOpen] = useState(false);
 
   function handleBell() {
     const today = Dates.today();
@@ -60,11 +155,12 @@ function DashHeader() {
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>Here's your financial overview</p>
       </div>
       <div className="flex items-center gap-3">
+        <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
         <button className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style={{ color: 'var(--text-3)' }}
-          onClick={() => dispatch({ type: 'NAV', screen: 'transactions' })}
+          onClick={() => setSearchOpen(true)}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-          title="Search transactions">
+          title="Search">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
             <path d="M12.5 12.5L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>

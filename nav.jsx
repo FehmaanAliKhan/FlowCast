@@ -68,11 +68,12 @@ const NAV_ITEMS = [
   { id: 'settings',     label: 'Settings',     Icon: IconSettings },
 ];
 
-function LeftRail() {
+function LeftRail({ onLogout }) {
   const { state, dispatch } = useStore();
   const { screen } = state.ui;
   const { startingBalanceCents, theme } = state.settings;
   const nav = (id) => dispatch({ type: 'NAV', screen: id });
+  const user = Api.getUser();
 
   function cycleTheme() {
     const next = theme === 'light' ? 'dark' : 'light';
@@ -158,9 +159,13 @@ function LeftRail() {
       <div className="mx-3 mb-4 p-3 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-            style={{ background: 'linear-gradient(135deg,#7B61FF,#5B4FE9)' }}>FC</div>
+            style={{ background: 'linear-gradient(135deg,#7B61FF,#5B4FE9)' }}>
+            {user ? user.email[0].toUpperCase() : 'FC'}
+          </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white truncate leading-none">FlowCast User</p>
+            <p className="text-xs font-semibold text-white truncate leading-none">
+              {user ? user.email : 'FlowCast User'}
+            </p>
             <p className="text-[10px] mt-0.5 font-mono truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>
               {Money.format(startingBalanceCents)}
             </p>
@@ -173,6 +178,16 @@ function LeftRail() {
             onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
             title="Toggle theme"
           >◑</button>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0 transition-all"
+              style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(248,113,113,0.2)'; e.currentTarget.style.color = '#f87171'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
+              title="Sign out"
+            >↪</button>
+          )}
         </div>
       </div>
     </aside>

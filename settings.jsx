@@ -1,11 +1,12 @@
 // FlowCast — Settings screen
 
-function Settings() {
+function Settings({ onLogout }) {
   const { state, dispatch, toast } = useStore();
   const { settings } = state;
   const [balance, setBalance] = useState((settings.startingBalanceCents / 100).toFixed(2));
   const [asOf, setAsOf]       = useState(settings.asOfDate);
   const [showReset, setShowReset] = useState(false);
+  const user = Api.getUser();
 
   function save() {
     const cents = Money.toCents(parseFloat(balance || 0));
@@ -116,8 +117,22 @@ function Settings() {
           </div>
         </Card>
 
+        {/* Account */}
+        {user && (
+          <Card className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-3)' }}>Account</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>{user.email}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Signed in</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={onLogout}>Sign out</Button>
+            </div>
+          </Card>
+        )}
+
         <p className="text-center text-xs text-slate-300 dark:text-slate-600 py-2">
-          FlowCast v1.0 — built for an interview, runs entirely in your browser.
+          FlowCast v1.0 · Data synced to server
         </p>
       </div>
 

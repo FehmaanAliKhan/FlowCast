@@ -1,4 +1,4 @@
-// FlowCast — React state management (Context + useReducer + localStorage persistence)
+// FlowCast — React state management (Context + useReducer + API + localStorage fallback)
 
 // ─── Initial state ────────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ const INITIAL_STATE = {
   ui: {
     screen: 'welcome',
     drawerOpen: false,
-    drawerContent: null, // { type, payload }
+    drawerContent: null,
     toasts: [],
     horizon: '6M',
     showMonteCarlo: false,
@@ -37,23 +37,19 @@ const INITIAL_STATE = {
 
 function reducer(state, action) {
   switch (action.type) {
-    // Navigation
     case 'NAV':
       return { ...state, ui: { ...state.ui, screen: action.screen, drawerOpen: false } };
 
-    // Drawer
     case 'OPEN_DRAWER':
       return { ...state, ui: { ...state.ui, drawerOpen: true, drawerContent: action.content } };
     case 'CLOSE_DRAWER':
       return { ...state, ui: { ...state.ui, drawerOpen: false, drawerContent: null } };
 
-    // Toasts
     case 'TOAST_ADD':
       return { ...state, ui: { ...state.ui, toasts: [...state.ui.toasts, { id: newId('toast'), message: action.message, variant: action.variant || 'default' }] } };
     case 'TOAST_REMOVE':
       return { ...state, ui: { ...state.ui, toasts: state.ui.toasts.filter(t => t.id !== action.id) } };
 
-    // Horizon / Monte Carlo
     case 'SET_HORIZON':
       return { ...state, ui: { ...state.ui, horizon: action.horizon } };
     case 'TOGGLE_MONTE_CARLO':
@@ -65,7 +61,6 @@ function reducer(state, action) {
       return { ...state, ui: { ...state.ui, activeScenarioIds: next } };
     }
 
-    // Transactions
     case 'ADD_TRANSACTION':
       return { ...state, transactions: [...state.transactions, action.tx] };
     case 'UPDATE_TRANSACTION':
@@ -73,7 +68,6 @@ function reducer(state, action) {
     case 'DELETE_TRANSACTION':
       return { ...state, transactions: state.transactions.filter(t => t.id !== action.id) };
 
-    // Recurring rules
     case 'ADD_RULE':
       return { ...state, recurringRules: [...state.recurringRules, action.rule] };
     case 'UPDATE_RULE':
@@ -83,27 +77,17 @@ function reducer(state, action) {
     case 'TOGGLE_RULE':
       return { ...state, recurringRules: state.recurringRules.map(r => r.id === action.id ? { ...r, active: !r.active } : r) };
 
-    // Scenarios
     case 'ADD_SCENARIO': {
       const s = action.scenario;
-      return {
-        ...state,
-        scenarios: [...state.scenarios, s],
-        ui: { ...state.ui, activeScenarioIds: [...state.ui.activeScenarioIds, s.id] },
-      };
+      return { ...state, scenarios: [...state.scenarios, s], ui: { ...state.ui, activeScenarioIds: [...state.ui.activeScenarioIds, s.id] } };
     }
     case 'UPDATE_SCENARIO':
       return { ...state, scenarios: state.scenarios.map(s => s.id === action.scenario.id ? action.scenario : s) };
     case 'DELETE_SCENARIO':
-      return {
-        ...state,
-        scenarios: state.scenarios.filter(s => s.id !== action.id),
-        ui: { ...state.ui, activeScenarioIds: state.ui.activeScenarioIds.filter(x => x !== action.id) },
-      };
+      return { ...state, scenarios: state.scenarios.filter(s => s.id !== action.id), ui: { ...state.ui, activeScenarioIds: state.ui.activeScenarioIds.filter(x => x !== action.id) } };
     case 'TOGGLE_SCENARIO':
       return { ...state, scenarios: state.scenarios.map(s => s.id === action.id ? { ...s, active: !s.active } : s) };
 
-    // Goals
     case 'ADD_GOAL':
       return { ...state, goals: [...state.goals, action.goal] };
     case 'UPDATE_GOAL':
@@ -111,42 +95,27 @@ function reducer(state, action) {
     case 'DELETE_GOAL':
       return { ...state, goals: state.goals.filter(g => g.id !== action.id) };
 
-    // Settings
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.patch } };
 
-    // First-run / initialization
     case 'SEED_DATA': {
       const seed = generateSeedData();
-      return {
-        ...state,
-        ...seed,
-        initialized: true,
-        ui: { ...state.ui, screen: 'dashboard', activeScenarioIds: seed.scenarios.filter(s => s.active).map(s => s.id) },
-      };
+      return { ...state, ...seed, initialized: true, ui: { ...state.ui, screen: 'dashboard', activeScenarioIds: seed.scenarios.filter(s => s.active).map(s => s.id) } };
     }
     case 'MANUAL_SETUP':
       return { ...state, initialized: true, ui: { ...state.ui, screen: 'dashboard' } };
     case 'IMPORT_DATA': {
       const d = action.data;
-      return {
-        ...state,
-        ...d,
-        initialized: true,
-        ui: { ...state.ui, screen: 'dashboard', activeScenarioIds: (d.scenarios || []).filter(s => s.active).map(s => s.id) },
-      };
+      return { ...state, ...d, initialized: true, ui: { ...state.ui, screen: 'dashboard', activeScenarioIds: (d.scenarios || []).filter(s => s.active).map(s => s.id) } };
     }
+
+    // RESET is handled in wrappedDispatch (clears localStorage + API), then falls through here
     case 'RESET':
-      Storage.clear();
       return { ...INITIAL_STATE, ui: { ...INITIAL_STATE.ui } };
+
     case 'LOAD_PERSISTED': {
       const d = action.data;
-      return {
-        ...state,
-        ...d,
-        initialized: true,
-        ui: { ...state.ui, screen: 'dashboard', activeScenarioIds: (d.scenarios || []).filter(s => s.active).map(s => s.id) },
-      };
+      return { ...state, ...d, initialized: true, ui: { ...state.ui, screen: 'dashboard', activeScenarioIds: (d.scenarios || []).filter(s => s.active).map(s => s.id) } };
     }
 
     default:
@@ -159,32 +128,78 @@ function reducer(state, action) {
 const StoreContext = createContext(null);
 
 function StoreProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const [state, rawDispatch]  = useReducer(reducer, INITIAL_STATE);
+  const [apiLoading, setApiLoading] = useState(true);
+  const saveTimerRef = useRef(null);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    const saved = Storage.load();
-    if (saved && saved.initialized) {
-      dispatch({ type: 'LOAD_PERSISTED', data: saved });
+  // ── Wrapped dispatch: intercept RESET to clear storage + API ──────────────
+  const dispatch = useCallback((action) => {
+    if (action.type === 'RESET') {
+      Storage.clear();
+      if (Api.isLoggedIn()) {
+        Api.clearData().catch(console.error);
+      }
     }
+    rawDispatch(action);
+  }, [rawDispatch]);
+
+  // ── On mount: load from API first, fall back to localStorage ─────────────
+  useEffect(() => {
+    async function init() {
+      if (Api.isLoggedIn()) {
+        try {
+          const { data } = await Api.loadData();
+          if (data && data.initialized) {
+            rawDispatch({ type: 'LOAD_PERSISTED', data });
+            setApiLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.warn('[FlowCast] API load failed, using localStorage:', err.message);
+        }
+      }
+      // Fall back to localStorage
+      const saved = Storage.load();
+      if (saved && saved.initialized) {
+        rawDispatch({ type: 'LOAD_PERSISTED', data: saved });
+      }
+      setApiLoading(false);
+    }
+    init();
   }, []);
 
-  // Persist to localStorage on every state change (except UI-only)
-  const prevStateRef = useRef(null);
+  // ── Persist on data changes: localStorage + debounced API ────────────────
   useEffect(() => {
     if (!state.initialized) return;
     const { ui, ...persist } = state;
-    Storage.save({ ...persist, initialized: true });
+    const payload = { ...persist, initialized: true };
+
+    // Always write localStorage as cache
+    Storage.save(payload);
+
+    // Debounced API save (1 s after last change)
+    if (Api.isLoggedIn()) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        Api.saveData(payload).catch(err =>
+          console.error('[FlowCast] API save failed:', err.message)
+        );
+      }, 1000);
+    }
   }, [state.transactions, state.recurringRules, state.scenarios, state.goals, state.settings, state.initialized]);
 
-  // Toast helper
+  // ── Toast helper ──────────────────────────────────────────────────────────
   const toast = useCallback((message, variant = 'default') => {
     const id = newId('toast');
-    dispatch({ type: 'TOAST_ADD', message, variant });
-    setTimeout(() => dispatch({ type: 'TOAST_REMOVE', id }), 3200);
+    rawDispatch({ type: 'TOAST_ADD', message, variant });
+    setTimeout(() => rawDispatch({ type: 'TOAST_REMOVE', id }), 3200);
   }, []);
 
-  return React.createElement(StoreContext.Provider, { value: { state, dispatch, toast } }, children);
+  return React.createElement(
+    StoreContext.Provider,
+    { value: { state, dispatch, toast, apiLoading } },
+    children
+  );
 }
 
 function useStore() {
@@ -193,7 +208,7 @@ function useStore() {
   return ctx;
 }
 
-// ─── Derived data selectors ───────────────────────────────────────────────────
+// ─── Derived data: forecasts ───────────────────────────────────────────────
 
 function useForecasts() {
   const { state } = useStore();
@@ -201,11 +216,10 @@ function useForecasts() {
   const { horizon, activeScenarioIds } = ui;
 
   const startDate = settings.asOfDate;
-  const endDate = Dates.horizonEnd(startDate, horizon);
+  const endDate   = Dates.horizonEnd(startDate, horizon);
   const baseInputs = { startingBalanceCents: settings.startingBalanceCents, transactions, recurringRules };
 
   const forecasts = {};
-
   for (const scenario of scenarios) {
     if (!activeScenarioIds.includes(scenario.id)) continue;
     const inputs = scenario.isBaseline ? baseInputs : ScenariosEngine.apply(baseInputs, scenario);

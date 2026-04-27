@@ -38,8 +38,21 @@ function DeltaBadge({ value, suffix = '' }) {
 // ─── Dashboard header ─────────────────────────────────────────────────────────
 
 function DashHeader() {
-  const { state } = useStore();
-  const { settings } = state;
+  const { state, dispatch, toast } = useStore();
+  const { settings, recurringRules } = state;
+  const user = Api.getUser();
+  const initial = user ? user.email[0].toUpperCase() : 'FC';
+
+  function handleBell() {
+    const today = Dates.today();
+    const soon = recurringRules.filter(r => r.active && r.amountCents < 0);
+    if (soon.length === 0) {
+      toast('No upcoming bills in the next 30 days.', 'default');
+    } else {
+      toast(`${soon.length} upcoming bill${soon.length > 1 ? 's' : ''} — check Recurring for details.`, 'default');
+    }
+  }
+
   return (
     <div className="flex items-start justify-between mb-6">
       <div>
@@ -48,16 +61,20 @@ function DashHeader() {
       </div>
       <div className="flex items-center gap-3">
         <button className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style={{ color: 'var(--text-3)' }}
+          onClick={() => dispatch({ type: 'NAV', screen: 'transactions' })}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          title="Search transactions">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.5"/>
             <path d="M12.5 12.5L16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>
         <button className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style={{ color: 'var(--text-3)' }}
+          onClick={handleBell}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          title="Notifications">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
             <path d="M9 2C6.239 2 4 4.239 4 7v4l-1.5 2h13L14 11V7c0-2.761-2.239-5-5-5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
             <path d="M7 15a2 2 0 0 0 4 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -65,11 +82,12 @@ function DashHeader() {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-400"
             style={{ border: '2px solid var(--card-bg)' }} />
         </button>
-        <div className="flex items-center gap-2.5 pl-2" style={{ borderLeft: '1px solid var(--border)' }}>
+        <div className="flex items-center gap-2.5 pl-2 cursor-pointer" style={{ borderLeft: '1px solid var(--border)' }}
+          onClick={() => dispatch({ type: 'NAV', screen: 'settings' })}>
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-            style={{ background: 'linear-gradient(135deg,#7B61FF,#5B4FE9)' }}>FC</div>
+            style={{ background: 'linear-gradient(135deg,#7B61FF,#5B4FE9)' }}>{initial}</div>
           <div className="hidden sm:block">
-            <p className="text-xs font-semibold leading-none" style={{ color: 'var(--text-1)' }}>FlowCast</p>
+            <p className="text-xs font-semibold leading-none" style={{ color: 'var(--text-1)' }}>{user ? user.email.split('@')[0] : 'FlowCast'}</p>
             <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>{Dates.format(settings.asOfDate)}</p>
           </div>
         </div>

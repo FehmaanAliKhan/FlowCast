@@ -152,8 +152,17 @@ def register():
         return jsonify({'error': 'Email and password are required'}), 400
     if '@' not in email or '.' not in email.split('@')[-1]:
         return jsonify({'error': 'Enter a valid email address'}), 400
-    if len(password) < 6:
-        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    import re
+    if len(password) < 12 or len(password) > 16:
+        return jsonify({'error': 'Password must be 12–16 characters long'}), 400
+    if not re.search(r'[A-Z]', password):
+        return jsonify({'error': 'Password must contain at least one uppercase letter'}), 400
+    if not re.search(r'[a-z]', password):
+        return jsonify({'error': 'Password must contain at least one lowercase letter'}), 400
+    if not re.search(r'[0-9]', password):
+        return jsonify({'error': 'Password must contain at least one number'}), 400
+    if not re.search(r'[^A-Za-z0-9]', password):
+        return jsonify({'error': 'Password must contain at least one symbol'}), 400
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=10)).decode()
     db = get_db()
     try:

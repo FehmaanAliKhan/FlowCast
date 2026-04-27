@@ -14,17 +14,24 @@ function AuthScreen({ onSuccess }) {
     Api.ping().then(up => setBackendUp(up));
   }, []);
 
+  function passwordRules(p) {
+    return [
+      { label: '12–16 characters',      ok: p.length >= 12 && p.length <= 16 },
+      { label: 'Uppercase letter (A-Z)', ok: /[A-Z]/.test(p) },
+      { label: 'Lowercase letter (a-z)', ok: /[a-z]/.test(p) },
+      { label: 'Number (0-9)',           ok: /[0-9]/.test(p) },
+      { label: 'Symbol (!@#$…)',         ok: /[^A-Za-z0-9]/.test(p) },
+    ];
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
 
-    if (mode === 'register' && password !== confirm) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (mode === 'register' && password.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
+    if (mode === 'register') {
+      if (password !== confirm) { setError('Passwords do not match.'); return; }
+      const failed = passwordRules(password).filter(r => !r.ok);
+      if (failed.length > 0) { setError('Password does not meet all requirements.'); return; }
     }
 
     setLoading(true);
@@ -116,13 +123,23 @@ function AuthScreen({ onSuccess }) {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder={mode === 'register' ? 'Min. 6 characters' : '••••••••'}
+                placeholder={mode === 'register' ? '12–16 chars, upper, lower, number, symbol' : '••••••••'}
                 required
                 className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-all"
                 style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
                 onFocus={e => e.target.style.borderColor = 'rgba(123,97,255,0.6)'}
                 onBlur={e  => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
               />
+              {mode === 'register' && password.length > 0 && (
+                <div className="mt-2 flex flex-col gap-1">
+                  {passwordRules(password).map(r => (
+                    <div key={r.label} className="flex items-center gap-2">
+                      <span style={{ color: r.ok ? '#10B981' : 'rgba(255,255,255,0.25)', fontSize: 11 }}>{r.ok ? '✓' : '✗'}</span>
+                      <span className="text-[11px]" style={{ color: r.ok ? '#10B981' : 'rgba(255,255,255,0.35)' }}>{r.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Confirm password (register only) */}

@@ -67,12 +67,12 @@ The frontend is a single-page app using React loaded via CDN (no build step). Gl
 
 ## AI Tools Used
 
-- **Tool:** Claude (via Claude Code)
-- **How I used it:** Scaffolded the full application architecture, built all React components, designed the Flask REST API with JWT auth and SQLAlchemy, debugged deployment issues on Railway and Supabase, implemented features like global search overlay, password strength validation, and financial health scoring.
+- **Tool:** Claude Design + Claude Code
+- **How I used it:** Used Claude Design to brainstorm the UI layout, colour system, and component hierarchy. Used Claude Code to assist with debugging specific issues, researching deployment configuration for Railway and Supabase, and looking up SQLAlchemy syntax for cross-database compatibility.
 - **Prompts that worked well:**
-  - *"Build a Flask backend with JWT auth, bcrypt passwords, and SQLAlchemy supporting both SQLite locally and PostgreSQL in production"*
-  - *"Add a global search overlay that searches across transactions, recurring rules, scenarios and goals with keyboard navigation"*
-  - *"The Railway deployment shows 502 — here are the deploy logs, what's wrong?"*
+  - *"What's the best way to structure a Flask API that supports both SQLite locally and PostgreSQL in production?"*
+  - *"My Railway deployment shows a 502 error — here are the deploy logs, what could cause this?"*
+  - *"How do I configure CORS in Flask for a frontend hosted on a different domain?"*
 
 ## Key Design Decisions
 

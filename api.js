@@ -1,8 +1,9 @@
 // FlowCast — API client (plain JS, no React)
-// Talks to the Flask backend at the same origin.
+// Talks to the Flask backend on Railway.
 // Falls back gracefully if the backend is unavailable (localStorage-only mode).
 
 const Api = (() => {
+  const BASE_URL  = 'https://flowcast-production-34a3.up.railway.app';
   const TOKEN_KEY = 'fc_token';
   const USER_KEY  = 'fc_user';
 
@@ -26,7 +27,7 @@ const Api = (() => {
 
     let res;
     try {
-      res = await fetch(path, {
+      res = await fetch(BASE_URL + path, {
         method,
         headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -86,7 +87,7 @@ const Api = (() => {
   // ── Health ──────────────────────────────────────────────────────────────────
   async function ping() {
     try {
-      const r = await fetch('/api/health');
+      const r = await fetch(BASE_URL + '/api/health');
       return r.ok;
     } catch {
       return false;

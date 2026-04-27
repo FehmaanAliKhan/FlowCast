@@ -54,12 +54,12 @@ function GoalCard({ goal, forecasts, scenarios, onEdit }) {
     <Card className="p-5" hover onClick={onEdit}>
       <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="font-semibold text-slate-800 dark:text-slate-100">{goal.name}</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Target: {Dates.format(goal.targetDate)}</p>
+          <p className="font-semibold" style={{ color: 'var(--text-1)' }}>{goal.name}</p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Target: {Dates.format(goal.targetDate)}</p>
         </div>
         <div className="text-right">
-          <p className="font-mono text-base font-semibold text-slate-800 dark:text-slate-100">{Money.format(goal.targetAmountCents)}</p>
-          <p className="text-xs text-slate-400">{pct}% there</p>
+          <p className="font-mono text-base font-semibold" style={{ color: 'var(--text-1)' }}>{Money.format(goal.targetAmountCents)}</p>
+          <p className="text-xs" style={{ color: 'var(--text-3)' }}>{pct}% there</p>
         </div>
       </div>
 
@@ -70,11 +70,11 @@ function GoalCard({ goal, forecasts, scenarios, onEdit }) {
         {scenarioProbabilities.map(({ scenario, hit }) => (
           <div key={scenario.id} className="flex items-center gap-3">
             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: scenario.color }} />
-            <span className="text-xs text-slate-500 dark:text-slate-400 w-24 truncate">{scenario.name}</span>
-            <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+            <span className="text-xs w-24 truncate" style={{ color: 'var(--text-2)' }}>{scenario.name}</span>
+            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--chip-bg)' }}>
               <div className="h-full rounded-full transition-all duration-500" style={{ width: hit ? '100%' : '12%', backgroundColor: hit ? '#10B981' : '#f87171' }} />
             </div>
-            <span className={`text-xs font-medium w-8 text-right ${hit ? 'text-emerald-600' : 'text-red-400'}`}>{hit ? '✓' : '✕'}</span>
+            <span className="text-xs font-medium w-8 text-right" style={{ color: hit ? '#10B981' : '#f87171' }}>{hit ? '✓' : '✕'}</span>
           </div>
         ))}
       </div>

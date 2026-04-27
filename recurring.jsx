@@ -113,17 +113,19 @@ function RuleCard({ rule, onEdit, onToggle }) {
       <CategoryDot category={rule.category} size={9} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{rule.label}</span>
-          <span className="text-xs text-slate-400 dark:text-slate-500">{cadenceLabel}</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>{rule.label}</span>
+          <span className="text-xs" style={{ color: 'var(--text-3)' }}>{cadenceLabel}</span>
         </div>
-        {next && <span className="text-xs text-slate-400 dark:text-slate-500">Next: {Dates.format(next)}</span>}
+        {next && <span className="text-xs" style={{ color: 'var(--text-3)' }}>Next: {Dates.format(next)}</span>}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        <span className={`font-mono text-sm font-semibold tabular-nums ${isIncome ? 'text-emerald-600' : 'text-slate-700 dark:text-slate-200'}`}>
+        <span className="font-mono text-sm font-semibold tabular-nums" style={{ color: isIncome ? '#10B981' : 'var(--text-1)' }}>
           {isIncome ? '+' : ''}{Money.format(rule.amountCents)}
         </span>
         <Toggle checked={rule.active} onChange={() => onToggle(rule.id)} size="sm" />
-        <button onClick={() => onEdit(rule)} className="text-slate-300 hover:text-slate-500 dark:hover:text-slate-300 transition-colors">
+        <button onClick={() => onEdit(rule)} className="transition-colors" style={{ color: 'var(--text-4)' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-2)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-4)'}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M11 2.5L13.5 5L6 12.5H3.5V10L11 2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -182,8 +184,8 @@ function Recurring() {
         <div className="flex flex-col gap-4">
           {income.length > 0 && (
             <Card>
-              <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Income</span>
+              <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--divider)' }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Income</span>
               </div>
               {income.map((r, i) => (
                 <div key={r.id}>
@@ -195,8 +197,8 @@ function Recurring() {
           )}
           {expenses.length > 0 && (
             <Card>
-              <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Expenses</span>
+              <div className="px-5 py-3" style={{ borderBottom: '1px solid var(--divider)' }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Expenses</span>
               </div>
               {expenses.map((r, i) => (
                 <div key={r.id}>

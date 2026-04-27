@@ -10,20 +10,26 @@ function Button({ children, variant = 'primary', size = 'md', onClick, disabled,
   const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-sm', lg: 'px-5 py-2.5 text-sm' };
   const variants = {
     primary:     `text-white disabled:opacity-40`,
-    secondary:   'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50',
-    ghost:       'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700',
+    secondary:   'border hover:opacity-90',
+    ghost:       'bg-transparent hover:opacity-80',
     destructive: 'bg-red-500 text-white hover:bg-red-600 disabled:opacity-40',
-    outline:     'border border-slate-200 text-slate-600 hover:bg-slate-50',
-    violet_ghost:'border text-slate-600 hover:bg-[#EEF0FF] hover:text-[#6C5DD3]',
+    outline:     'border hover:opacity-80',
+    violet_ghost:'border hover:bg-[#EEF0FF] hover:text-[#6C5DD3]',
   };
-  const primaryStyle = variant === 'primary' ? { background: 'linear-gradient(135deg,#7B61FF,#5B4FE9)' } : {};
+  const variantStyle = {
+    secondary: { backgroundColor: 'var(--card-bg)', color: 'var(--text-1)', borderColor: 'var(--border)' },
+    ghost:     { backgroundColor: 'transparent', color: 'var(--text-2)' },
+    outline:   { backgroundColor: 'transparent', color: 'var(--text-2)', borderColor: 'var(--border)' },
+    violet_ghost: { borderColor: 'var(--border)', color: 'var(--text-2)' },
+  }[variant] || {};
+  const primaryStyle = variant === 'primary' ? { background: 'linear-gradient(135deg,#7B61FF,#5B4FE9)' } : variantStyle;
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
       style={primaryStyle}
-      className={`${base} ${sizes[size]} ${variants[variant] || variants.primary} ${fullWidth ? 'w-full' : ''} ${className}`}
+      className={`${base} ${sizes[size]} ${variants[variant] ?? variants.primary} ${fullWidth ? 'w-full' : ''} ${className}`}
     >
       {children}
     </button>
@@ -107,7 +113,7 @@ function Toggle({ checked, onChange, label, size = 'md' }) {
       >
         <div className={`absolute top-0.5 ${dw} bg-white rounded-full shadow transition-transform duration-200 ${tx}`} />
       </div>
-      {label && <span className="text-sm text-slate-600">{label}</span>}
+      {label && <span className="text-sm" style={{ color: 'var(--text-2)' }}>{label}</span>}
     </label>
   );
 }
@@ -117,15 +123,20 @@ function Toggle({ checked, onChange, label, size = 'md' }) {
 function SegmentedControl({ options, value, onChange, size = 'sm' }) {
   const sizes = { sm: 'px-3 py-1 text-xs', md: 'px-4 py-1.5 text-sm' };
   return (
-    <div className="flex gap-0.5 bg-slate-100 rounded-xl p-0.5">
-      {options.map(o => (
-        <button key={o.value ?? o} onClick={() => onChange(o.value ?? o)}
-          className={`${sizes[size]} rounded-lg font-medium transition-all duration-150
-            ${(o.value ?? o) === value ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          {o.label ?? o}
-        </button>
-      ))}
+    <div className="flex gap-0.5 rounded-xl p-0.5" style={{ backgroundColor: 'var(--chip-bg)' }}>
+      {options.map(o => {
+        const active = (o.value ?? o) === value;
+        return (
+          <button key={o.value ?? o} onClick={() => onChange(o.value ?? o)}
+            className={`${sizes[size]} rounded-lg font-medium transition-all duration-150`}
+            style={active
+              ? { backgroundColor: 'var(--card-bg)', color: 'var(--text-1)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
+              : { color: 'var(--text-3)' }}
+          >
+            {o.label ?? o}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -136,7 +147,7 @@ function Chip({ label, color, active, onClick }) {
   return (
     <button onClick={onClick}
       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-150 border"
-      style={active ? { backgroundColor: color, color: 'white', borderColor: color } : { borderColor: '#e2e8f0', color: '#94a3b8', backgroundColor: 'white' }}
+      style={active ? { backgroundColor: color, color: 'white', borderColor: color } : { borderColor: 'var(--border)', color: 'var(--text-3)', backgroundColor: 'var(--card-bg)' }}
     >
       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: active ? 'rgba(255,255,255,0.7)' : color }} />
       {label}
@@ -241,8 +252,8 @@ function EmptyState({ icon, title, description, action }) {
     <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
       <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--chip-bg)' }}>{icon}</div>
       <div>
-        <p className="text-sm font-semibold text-slate-700">{title}</p>
-        <p className="text-xs text-slate-400 mt-1">{description}</p>
+        <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{title}</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>{description}</p>
       </div>
       {action}
     </div>
@@ -252,7 +263,7 @@ function EmptyState({ icon, title, description, action }) {
 // ─── Skeleton / Divider / misc ────────────────────────────────────────────────
 
 function Skeleton({ className = '' }) {
-  return <div className={`bg-slate-100 rounded animate-pulse ${className}`} />;
+  return <div className={`rounded animate-pulse ${className}`} style={{ backgroundColor: 'var(--chip-bg)' }} />;
 }
 
 function AmountInput({ value, onChange, type = 'expense', label }) {
@@ -263,8 +274,8 @@ function AmountInput({ value, onChange, type = 'expense', label }) {
       <div className="relative flex items-center">
         <span className="absolute left-4 text-2xl font-mono font-bold pointer-events-none" style={{ color }}>$</span>
         <input type="number" min="0" step="0.01" value={value} onChange={e => onChange(e.target.value)} placeholder="0.00"
-          className="w-full text-2xl font-mono font-bold pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#6C5DD3]/20 focus:border-[#6C5DD3] transition-colors"
-          style={{ color }}
+          className="w-full text-2xl font-mono font-bold pl-10 pr-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[#6C5DD3]/20 focus:border-[#6C5DD3] transition-colors"
+          style={{ color, backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)' }}
         />
       </div>
     </div>
@@ -278,25 +289,25 @@ function CategoryDot({ category, size = 8 }) {
 function ScreenHeader({ title, action }) {
   return (
     <div className="flex items-center justify-between mb-6">
-      <h1 className="text-lg font-bold text-slate-800">{title}</h1>
+      <h1 className="text-lg font-bold" style={{ color: 'var(--text-1)' }}>{title}</h1>
       {action}
     </div>
   );
 }
 
 function Divider() {
-  return <div className="border-t border-slate-100" />;
+  return <div style={{ borderTop: '1px solid var(--divider)' }} />;
 }
 
 function TypeToggle({ value, onChange }) {
   return (
-    <div className="flex rounded-xl overflow-hidden border border-slate-200">
+    <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
       {['expense', 'income'].map(t => (
         <button key={t} onClick={() => onChange(t)}
           className="flex-1 py-2.5 text-sm font-semibold transition-all capitalize"
           style={value === t
             ? { backgroundColor: t === 'expense' ? '#FEF2F2' : '#ECFDF5', color: t === 'expense' ? '#F87171' : '#10B981' }
-            : { color: '#94a3b8' }}
+            : { color: 'var(--text-3)', backgroundColor: 'var(--input-bg)' }}
         >{t}</button>
       ))}
     </div>
@@ -312,10 +323,52 @@ function ProgressBar({ value, max, color = VIOLET, className = '' }) {
   );
 }
 
+// ─── Category icons ───────────────────────────────────────────────────────────
+
+const CATEGORY_ICONS = {
+  income:        '💵',
+  housing:       '🏠',
+  food:          '🍔',
+  transport:     '🚗',
+  entertainment: '🎮',
+  health:        '💊',
+  education:     '📚',
+  utilities:     '⚡',
+  shopping:      '🛍️',
+  savings:       '🏦',
+  other:         '📌',
+};
+
+function CategoryIcon({ category, size = 36 }) {
+  const icon = CATEGORY_ICONS[category] || '📌';
+  const color = categoryColor(category);
+  const px = size === 'sm' ? 28 : size === 'md' ? 36 : size === 'lg' ? 44 : size;
+  return (
+    <div className="rounded-xl flex items-center justify-center shrink-0"
+      style={{ width: px, height: px, backgroundColor: color + '22', fontSize: px * 0.44 }}>
+      {icon}
+    </div>
+  );
+}
+
+// ─── StatBadge ────────────────────────────────────────────────────────────────
+
+function StatBadge({ value, label }) {
+  const pos = value >= 0;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] font-medium uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.45)' }}>{label}</span>
+      <span className="text-sm font-mono font-semibold" style={{ color: pos ? '#34d399' : '#f87171' }}>
+        {pos ? '+' : ''}{value}
+      </span>
+    </div>
+  );
+}
+
 Object.assign(window, {
   Button, Card, Input, Select, Toggle, SegmentedControl,
   Chip, KPICard, Drawer, Modal, ToastContainer,
-  EmptyState, Skeleton, AmountInput, CategoryDot,
+  EmptyState, Skeleton, AmountInput, CategoryDot, CategoryIcon,
   ScreenHeader, Divider, TypeToggle, ProgressBar,
-  VIOLET, VIOLET_LIGHT,
+  VIOLET, VIOLET_LIGHT, CATEGORY_ICONS, StatBadge,
 });

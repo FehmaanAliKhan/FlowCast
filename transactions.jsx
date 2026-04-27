@@ -71,17 +71,21 @@ function TransactionForm({ tx, onSave, onDelete, onClose }) {
 
 function TxRow({ tx, onClick }) {
   const isIncome = tx.amountCents > 0;
+  const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-left group"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+      style={{ backgroundColor: hovered ? 'var(--hover-bg)' : 'transparent' }}
     >
-      <CategoryDot category={tx.category} size={9} />
+      <CategoryIcon category={tx.category} size="sm" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-700 dark:text-slate-200 truncate">{tx.note || categoryLabel(tx.category)}</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500">{categoryLabel(tx.category)}</p>
+        <p className="text-sm truncate" style={{ color: 'var(--text-1)' }}>{tx.note || categoryLabel(tx.category)}</p>
+        <p className="text-xs" style={{ color: 'var(--text-3)' }}>{categoryLabel(tx.category)}</p>
       </div>
-      <span className={`font-mono text-sm font-medium tabular-nums shrink-0 ${isIncome ? 'text-emerald-600' : 'text-slate-700 dark:text-slate-200'}`}>
+      <span className="font-mono text-sm font-medium tabular-nums shrink-0" style={{ color: isIncome ? '#10B981' : 'var(--text-1)' }}>
         {isIncome ? '+' : ''}{Money.format(tx.amountCents)}
       </span>
     </button>
@@ -180,9 +184,9 @@ function Transactions() {
           {grouped.map(([date, txs], gi) => (
             <div key={date}>
               {gi > 0 && <Divider />}
-              <div className="sticky top-0 z-10 px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
-                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">{Dates.format(date)}</span>
-                <span className="ml-2 text-xs text-slate-300 dark:text-slate-600">
+              <div className="sticky top-0 z-10 px-4 py-2" style={{ backgroundColor: 'var(--hover-bg)', borderBottom: '1px solid var(--divider)' }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{Dates.format(date)}</span>
+                <span className="ml-2 text-xs" style={{ color: 'var(--text-4)' }}>
                   {Money.formatSigned(txs.reduce((s, t) => s + t.amountCents, 0))}
                 </span>
               </div>

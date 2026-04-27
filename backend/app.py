@@ -1,47 +1,49 @@
 """
-FlowCast — Python/Flask backend
-Serves the frontend static files and provides a JSON REST API with JWT auth.
+FlowCast — Flask backend
+- Local dev:  SQLite  (no setup, DATABASE_URL not set)
+- Production: PostgreSQL  (set DATABASE_URL to your Supabase connection string)
 
 Start: python3 backend/app.py
-      (or: PORT=3001 python3 backend/app.py)
 """
 
-import os, sqlite3, json, time
-from collections import defaultdict
+import os, json, time, bcrypt, jwt
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+from collections import defaultdict
 
-import bcrypt
-import jwt
 from flask import Flask, g, jsonify, request, send_from_directory
 from flask_cors import CORS
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError
 
-# ── Config ─────────────────────────────────────────────────────────────────────
+# ── Config ──────────────────────────────────────────────────────────────────
 
-SECRET_KEY = os.environ.get(
-    'JWT_SECRET',
-    'fc-dev-secret-b7e2a91d4f83c65e0d1a8b3f9c27e54ad61092e7f3b4a5c8d0e1f2'
-)
+SECRET_KEY   = os.environ.get('JWT_SECRET', 'fc-dev-secret-b7e2a91d4f83c65e0d1a8b3f9c27e54ad61092e7f3b4a5c8d0e1f2')
 TOKEN_DAYS   = 30
-DB_PATH      = os.path.join(os.path.dirname(__file__), 'flowcast.db')
 FRONTEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-# ── App setup ──────────────────────────────────────────────────────────────────
+_DB_FILE     = os.path.join(os.path.dirname(__file__), 'flowcast.db')
+DATABASE_URL = os.environ.get('DATABASE_URL', f'sqlite:///{_DB_FILE}')
+
+# Railway/Heroku export postgres:// — SQLAlchemy needs postgresql://
+if DATABASE_URL.startswith('postgres://'):
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+
+IS_POSTGRES = DATABASE_URL.startswith('postgresql')
+
+# ── SQLAlchemy engine ────────────────────────────────────────────────────────
+
+_engine_kw = {'pool_pre_ping': True}
+if not IS_POSTGRES:
+    _engine_kw['connect_args'] = {'check_same_thread': False}
+
+engine = create_engine(DATABASE_URL, **_engine_kw)
+
+# ── App ──────────────────────────────────────────────────────────────────────
 
 app = Flask(__name__, static_folder=None)
 CORS(app, origins='*', supports_credentials=True)
-app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024   # 4 MB max body
-
-# ── Database helpers ───────────────────────────────────────────────────────────
-
-def get_db():
-    if 'db' not in g:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA journal_mode=WAL')
-        conn.execute('PRAGMA foreign_keys=ON')
-        g.db = conn
-    return g.db
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024
 
 @app.teardown_appcontext
 def close_db(_):
@@ -49,33 +51,55 @@ def close_db(_):
     if db:
         db.close()
 
+def get_db():
+    if 'db' not in g:
+        g.db = engine.connect()
+    return g.db
+
 def init_db():
-    with sqlite3.connect(DB_PATH) as db:
-        db.executescript('''
-            CREATE TABLE IF NOT EXISTS users (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                email         TEXT    UNIQUE NOT NULL COLLATE NOCASE,
-                password_hash TEXT    NOT NULL,
-                created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
-            );
-            CREATE TABLE IF NOT EXISTS user_data (
+    if IS_POSTGRES:
+        stmts = [
+            """CREATE TABLE IF NOT EXISTS users (
+                id            SERIAL PRIMARY KEY,
+                email         TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS user_data (
+                user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                data       TEXT NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )""",
+        ]
+    else:
+        stmts = [
+            """CREATE TABLE IF NOT EXISTS users (
+                id            INTEGER PRIMARY KEY,
+                email         TEXT UNIQUE NOT NULL COLLATE NOCASE,
+                password_hash TEXT NOT NULL,
+                created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+            )""",
+            """CREATE TABLE IF NOT EXISTS user_data (
                 user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
                 data       TEXT NOT NULL,
                 updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-        ''')
-        print('[DB] Schema ready —', DB_PATH)
+            )""",
+        ]
+    with engine.connect() as conn:
+        for stmt in stmts:
+            conn.execute(text(stmt))
+        conn.commit()
+    print(f'[DB] {"PostgreSQL" if IS_POSTGRES else "SQLite"} schema ready')
 
-# ── JWT helpers ────────────────────────────────────────────────────────────────
+# ── JWT ──────────────────────────────────────────────────────────────────────
 
-def make_token(user_id: int, email: str) -> str:
-    payload = {
-        'sub':   str(user_id),
-        'email': email,
-        'exp':   datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS),
-        'iat':   datetime.now(timezone.utc),
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+def make_token(user_id, email):
+    return jwt.encode(
+        {'sub': str(user_id), 'email': email,
+         'exp': datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS),
+         'iat': datetime.now(timezone.utc)},
+        SECRET_KEY, algorithm='HS256'
+    )
 
 def require_auth(f):
     @wraps(f)
@@ -94,11 +118,11 @@ def require_auth(f):
         return f(*args, **kwargs)
     return wrapper
 
-# ── Simple in-memory rate limiter for auth endpoints ──────────────────────────
+# ── Rate limiter ─────────────────────────────────────────────────────────────
 
-_rl: dict[str, list] = defaultdict(list)
+_rl: dict = defaultdict(list)
 
-def rate_limit(max_req: int = 20, window: int = 900):
+def rate_limit(max_req=20, window=900):
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
@@ -112,16 +136,11 @@ def rate_limit(max_req: int = 20, window: int = 900):
         return wrapper
     return decorator
 
-# ── Error handler ──────────────────────────────────────────────────────────────
-
 @app.errorhandler(Exception)
 def handle_error(e):
-    code = getattr(e, 'code', 500)
-    return jsonify({'error': str(e)}), code
+    return jsonify({'error': str(e)}), getattr(e, 'code', 500)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Auth routes
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Auth routes ───────────────────────────────────────────────────────────────
 
 @app.post('/api/auth/register')
 @rate_limit(20, 900)
@@ -129,26 +148,24 @@ def register():
     body     = request.get_json(silent=True) or {}
     email    = (body.get('email') or '').strip().lower()
     password = body.get('password') or ''
-
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
     if '@' not in email or '.' not in email.split('@')[-1]:
         return jsonify({'error': 'Enter a valid email address'}), 400
     if len(password) < 6:
         return jsonify({'error': 'Password must be at least 6 characters'}), 400
-
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=10)).decode()
     db = get_db()
     try:
-        cur = db.execute(
-            'INSERT INTO users (email, password_hash) VALUES (?, ?)',
-            (email, pw_hash)
+        result  = db.execute(
+            text('INSERT INTO users (email, password_hash) VALUES (:e, :h) RETURNING id'),
+            {'e': email, 'h': pw_hash}
         )
+        user_id = result.scalar()
         db.commit()
-        user_id = cur.lastrowid
-        token   = make_token(user_id, email)
-        return jsonify({'token': token, 'user': {'id': user_id, 'email': email}}), 201
-    except sqlite3.IntegrityError:
+        return jsonify({'token': make_token(user_id, email), 'user': {'id': user_id, 'email': email}}), 201
+    except IntegrityError:
+        db.rollback()
         return jsonify({'error': 'An account with that email already exists'}), 409
 
 
@@ -158,49 +175,41 @@ def login():
     body     = request.get_json(silent=True) or {}
     email    = (body.get('email') or '').strip().lower()
     password = body.get('password') or ''
-
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
-
     db  = get_db()
-    row = db.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-
-    # Always run hash check (timing-safe: avoids user enumeration)
-    dummy_hash = b'$2b$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-    check_hash = row['password_hash'].encode() if row else dummy_hash
-    match = bcrypt.checkpw(password.encode(), check_hash)
-
+    row = db.execute(
+        text('SELECT id, email, password_hash FROM users WHERE email = :e'),
+        {'e': email}
+    ).mappings().fetchone()
+    dummy = b'$2b$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+    check = row['password_hash'].encode() if row else dummy
+    match = bcrypt.checkpw(password.encode(), check)
     if not row or not match:
         return jsonify({'error': 'Invalid email or password'}), 401
-
-    token = make_token(row['id'], row['email'])
-    return jsonify({'token': token, 'user': {'id': row['id'], 'email': row['email']}})
+    return jsonify({'token': make_token(row['id'], row['email']), 'user': {'id': row['id'], 'email': row['email']}})
 
 
 @app.get('/api/auth/me')
 @require_auth
 def me():
-    db  = get_db()
-    row = db.execute(
-        'SELECT id, email, created_at FROM users WHERE id = ?',
-        (g.user_id,)
-    ).fetchone()
+    row = get_db().execute(
+        text('SELECT id, email, created_at FROM users WHERE id = :uid'),
+        {'uid': g.user_id}
+    ).mappings().fetchone()
     if not row:
         return jsonify({'error': 'User not found'}), 404
     return jsonify({'user': dict(row)})
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Data routes  (entire app state stored as a single JSON blob per user)
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Data routes ───────────────────────────────────────────────────────────────
 
 @app.get('/api/data')
 @require_auth
 def get_data():
-    db  = get_db()
-    row = db.execute(
-        'SELECT data FROM user_data WHERE user_id = ?',
-        (g.user_id,)
-    ).fetchone()
+    row = get_db().execute(
+        text('SELECT data FROM user_data WHERE user_id = :uid'),
+        {'uid': g.user_id}
+    ).mappings().fetchone()
     if not row:
         return jsonify({'data': None})
     try:
@@ -212,17 +221,21 @@ def get_data():
 @app.put('/api/data')
 @require_auth
 def save_data():
-    body = request.get_json(silent=True) or {}
-    data = body.get('data')
+    data = (request.get_json(silent=True) or {}).get('data')
     if data is None:
         return jsonify({'error': 'No data provided'}), 400
-
-    serialized = json.dumps(data, separators=(',', ':'))  # compact JSON
+    serialized = json.dumps(data, separators=(',', ':'))
     db = get_db()
-    db.execute('''
-        INSERT INTO user_data (user_id, data, updated_at) VALUES (?, ?, datetime('now'))
-        ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
-    ''', (g.user_id, serialized))
+    if IS_POSTGRES:
+        db.execute(text('''
+            INSERT INTO user_data (user_id, data, updated_at) VALUES (:uid, :d, NOW())
+            ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+        '''), {'uid': g.user_id, 'd': serialized})
+    else:
+        db.execute(text('''
+            INSERT INTO user_data (user_id, data, updated_at) VALUES (:uid, :d, datetime('now'))
+            ON CONFLICT (user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
+        '''), {'uid': g.user_id, 'd': serialized})
     db.commit()
     return jsonify({'ok': True})
 
@@ -231,21 +244,17 @@ def save_data():
 @require_auth
 def clear_data():
     db = get_db()
-    db.execute('DELETE FROM user_data WHERE user_id = ?', (g.user_id,))
+    db.execute(text('DELETE FROM user_data WHERE user_id = :uid'), {'uid': g.user_id})
     db.commit()
     return jsonify({'ok': True})
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Health check
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Health ────────────────────────────────────────────────────────────────────
 
 @app.get('/api/health')
 def health():
-    return jsonify({'ok': True, 'ts': int(time.time()), 'version': '1.0.0'})
+    return jsonify({'ok': True, 'db': 'postgresql' if IS_POSTGRES else 'sqlite', 'ts': int(time.time())})
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Frontend — serve static files, SPA fallback to index.html
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Frontend static files ─────────────────────────────────────────────────────
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
@@ -255,14 +264,11 @@ def serve_frontend(path):
         return send_from_directory(FRONTEND_DIR, path)
     return send_from_directory(FRONTEND_DIR, 'index.html')
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Entry point
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
     init_db()
-    port  = int(os.environ.get('PORT', 3001))
-    debug = os.environ.get('DEBUG', 'false').lower() == 'true'
-    print(f'FlowCast server  →  http://localhost:{port}')
-    print(f'Frontend dir     →  {FRONTEND_DIR}')
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    port = int(os.environ.get('PORT', 3001))
+    print(f'FlowCast  →  http://localhost:{port}')
+    print(f'Database  →  {"PostgreSQL" if IS_POSTGRES else "SQLite (dev)"}')
+    app.run(host='0.0.0.0', port=port, debug=os.environ.get('DEBUG','').lower()=='true')

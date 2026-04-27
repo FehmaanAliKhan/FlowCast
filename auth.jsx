@@ -1,7 +1,7 @@
 // FlowCast — Auth screen (login / register)
 
-function AuthScreen({ onSuccess }) {
-  const [mode, setMode]       = useState('login');   // 'login' | 'register'
+function AuthScreen({ onSuccess, onBack, initialMode = 'login' }) {
+  const [mode, setMode]       = useState(initialMode);   // 'login' | 'register'
   const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -58,6 +58,16 @@ function AuthScreen({ onSuccess }) {
       <div className="absolute pointer-events-none" style={{ bottom: '10%', right: '5%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle,rgba(20,184,166,0.1) 0%,transparent 70%)', filter: 'blur(40px)' }} />
 
       <div className="relative z-10 w-full max-w-sm">
+
+        {/* Back */}
+        {onBack && (
+          <button onClick={onBack} className="flex items-center gap-1.5 text-xs mb-6 transition-colors"
+            style={{ color: 'rgba(255,255,255,0.35)' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}>
+            ← Back to home
+          </button>
+        )}
 
         {/* Logo */}
         <div className="flex justify-center mb-8">

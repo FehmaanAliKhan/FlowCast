@@ -117,22 +117,112 @@ function App({ onLogout }) {
   );
 }
 
+// ── Landing page ───────────────────────────────────────────────────────────
+
+function LandingPage({ onSignIn, onRegister, onGuest }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg,#0f0a2e 0%,#1a1040 35%,#0d0d1a 70%,#060412 100%)' }}>
+
+      {/* Blobs */}
+      <div className="absolute pointer-events-none" style={{ top: '8%', left: '5%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle,rgba(123,97,255,0.15) 0%,transparent 70%)', filter: 'blur(60px)' }} />
+      <div className="absolute pointer-events-none" style={{ bottom: '8%', right: '5%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle,rgba(20,184,166,0.08) 0%,transparent 70%)', filter: 'blur(50px)' }} />
+
+      <div className="relative z-10 w-full max-w-lg text-center">
+
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg,#7B61FF,#5B4FE9)', boxShadow: '0 8px 32px rgba(123,97,255,0.45)' }}>
+              <svg width="22" height="22" viewBox="0 0 18 18" fill="none">
+                <path d="M2 13L6 8L9.5 11L13 6L16 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M13 6H16V9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">FlowCast</span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: 'rgba(123,97,255,0.2)', color: '#a78bfa' }}>Beta</span>
+          </div>
+        </div>
+
+        {/* Headline */}
+        <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight mb-4">
+          Know where your money<br />
+          <span style={{ background: 'linear-gradient(90deg,#7B61FF,#38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>is headed.</span>
+        </h1>
+        <p className="text-base mb-8 max-w-sm mx-auto" style={{ color: 'rgba(255,255,255,0.5)' }}>
+          Project your cash flow months ahead, run what-if scenarios, and set savings goals — all in your browser.
+        </p>
+
+        {/* Feature chips */}
+        <div className="flex flex-wrap justify-center gap-2 mb-10">
+          {['📊 Cash flow forecasts','⚡ Scenario planning','🎯 Savings goals','🔒 Secure accounts'].map(f => (
+            <span key={f} className="text-xs px-3 py-1.5 rounded-full font-medium"
+              style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>{f}</span>
+          ))}
+        </div>
+
+        {/* CTAs */}
+        <div className="flex flex-col gap-3 max-w-xs mx-auto">
+          <button onClick={onRegister}
+            className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg,#7B61FF,#5B4FE9)', boxShadow: '0 4px 20px rgba(123,97,255,0.4)' }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+            Create free account →
+          </button>
+          <button onClick={onSignIn}
+            className="w-full py-3.5 rounded-xl text-sm font-semibold transition-all"
+            style={{ backgroundColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.12)' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.12)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.07)'}>
+            Sign in to existing account
+          </button>
+          <button onClick={onGuest}
+            className="w-full py-2.5 text-sm transition-all"
+            style={{ color: 'rgba(255,255,255,0.3)' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}>
+            Continue with preloaded demo data
+          </button>
+        </div>
+
+        <p className="text-xs mt-8" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          Your data is encrypted and stored securely on the server.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── AppRoot: handles auth gate before mounting StoreProvider ───────────────
 
 function AppRoot() {
-  const [authed, setAuthed] = useState(Api.isLoggedIn());
+  const [authed, setAuthed]   = useState(Api.isLoggedIn());
+  const [page, setPage]       = useState('landing'); // 'landing' | 'login' | 'register'
 
-  // When the API emits a 401, drop back to the auth screen
   useEffect(() => {
-    Api.onUnauthenticated(() => setAuthed(false));
+    Api.onUnauthenticated(() => { setAuthed(false); setPage('landing'); });
   }, []);
 
   function handleLogout() {
-    Api.logout();   // clears token; onUnauthenticated fires → setAuthed(false)
+    Api.logout();
   }
 
   if (!authed) {
-    return <AuthScreen onSuccess={() => setAuthed(true)} />;
+    if (page === 'landing') {
+      return (
+        <LandingPage
+          onSignIn={() => setPage('login')}
+          onRegister={() => setPage('register')}
+          onGuest={() => {
+            // Mount the app without auth — StoreProvider will use localStorage / show Welcome
+            setAuthed('guest');
+          }}
+        />
+      );
+    }
+    return <AuthScreen initialMode={page} onSuccess={() => setAuthed(true)} onBack={() => setPage('landing')} />;
   }
 
   return (

@@ -149,16 +149,21 @@ function StoreProvider({ children }) {
       if (Api.isLoggedIn()) {
         try {
           const { data } = await Api.loadData();
+          // API responded — use server data only (don't bleed other users' localStorage)
           if (data && data.initialized) {
             rawDispatch({ type: 'LOAD_PERSISTED', data });
-            setApiLoading(false);
-            return;
           }
+          // New user with no server data: clear localStorage and show welcome
+          else {
+            Storage.clear();
+          }
+          setApiLoading(false);
+          return;
         } catch (err) {
           console.warn('[FlowCast] API load failed, using localStorage:', err.message);
         }
       }
-      // Fall back to localStorage
+      // Fall back to localStorage only when API is unreachable
       const saved = Storage.load();
       if (saved && saved.initialized) {
         rawDispatch({ type: 'LOAD_PERSISTED', data: saved });

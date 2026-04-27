@@ -199,6 +199,31 @@ def login():
     return jsonify({'token': make_token(row['id'], row['email']), 'user': {'id': row['id'], 'email': row['email']}})
 
 
+@app.post('/api/auth/change-password')
+@require_auth
+def change_password():
+    import re
+    body = request.get_json(silent=True) or {}
+    current_password = body.get('currentPassword') or ''
+    new_password     = body.get('newPassword') or ''
+    if not current_password or not new_password:
+        return jsonify({'error': 'Both current and new password are required'}), 400
+    db  = get_db()
+    row = db.execute(text('SELECT password_hash FROM users WHERE id = :uid'), {'uid': g.user_id}).mappings().fetchone()
+    if not row or not bcrypt.checkpw(current_password.encode(), row['password_hash'].encode()):
+        return jsonify({'error': 'Current password is incorrect'}), 401
+    if len(new_password) < 12 or len(new_password) > 16:
+        return jsonify({'error': 'Password must be 12–16 characters long'}), 400
+    if not re.search(r'[A-Z]', new_password): return jsonify({'error': 'Password must contain an uppercase letter'}), 400
+    if not re.search(r'[a-z]', new_password): return jsonify({'error': 'Password must contain a lowercase letter'}), 400
+    if not re.search(r'[0-9]', new_password): return jsonify({'error': 'Password must contain a number'}), 400
+    if not re.search(r'[^A-Za-z0-9]', new_password): return jsonify({'error': 'Password must contain a symbol'}), 400
+    new_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt(rounds=10)).decode()
+    db.execute(text('UPDATE users SET password_hash = :h WHERE id = :uid'), {'h': new_hash, 'uid': g.user_id})
+    db.commit()
+    return jsonify({'ok': True})
+
+
 @app.get('/api/auth/me')
 @require_auth
 def me():

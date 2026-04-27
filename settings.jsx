@@ -6,7 +6,31 @@ function Settings({ onLogout }) {
   const [balance, setBalance] = useState((settings.startingBalanceCents / 100).toFixed(2));
   const [asOf, setAsOf]       = useState(settings.asOfDate);
   const [showReset, setShowReset] = useState(false);
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw]         = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
   const user = Api.getUser();
+
+  async function changePassword() {
+    if (!currentPw || !newPw || !confirmPw) { toast('Fill in all password fields.', 'error'); return; }
+    if (newPw !== confirmPw) { toast('New passwords do not match.', 'error'); return; }
+    const rules = [
+      newPw.length >= 12 && newPw.length <= 16,
+      /[A-Z]/.test(newPw), /[a-z]/.test(newPw), /[0-9]/.test(newPw), /[^A-Za-z0-9]/.test(newPw),
+    ];
+    if (rules.some(r => !r)) { toast('New password does not meet complexity requirements.', 'error'); return; }
+    setPwLoading(true);
+    try {
+      await Api.changePassword(currentPw, newPw);
+      toast('Password updated successfully.', 'success');
+      setCurrentPw(''); setNewPw(''); setConfirmPw('');
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setPwLoading(false);
+    }
+  }
 
   function save() {
     const cents = Money.toCents(parseFloat(balance || 0));
@@ -69,7 +93,7 @@ function Settings({ onLogout }) {
           <SegmentedControl
             options={[{ value: '3M', label: '3M' }, { value: '6M', label: '6M' }, { value: '1Y', label: '1Y' }, { value: '2Y', label: '2Y' }]}
             value={settings.horizon}
-            onChange={horizon => dispatch({ type: 'UPDATE_SETTINGS', patch: { horizon } })}
+            onChange={horizon => { dispatch({ type: 'UPDATE_SETTINGS', patch: { horizon } }); dispatch({ type: 'SET_HORIZON', horizon }); }}
             size="md"
           />
         </Card>
@@ -116,6 +140,20 @@ function Settings({ onLogout }) {
             ))}
           </div>
         </Card>
+
+        {/* Change password */}
+        {user && (
+          <Card className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide mb-4" style={{ color: 'var(--text-3)' }}>Change password</p>
+            <div className="flex flex-col gap-3">
+              <Input label="Current password" type="password" value={currentPw} onChange={setCurrentPw} />
+              <Input label="New password" type="password" value={newPw} onChange={setNewPw} />
+              <Input label="Confirm new password" type="password" value={confirmPw} onChange={setConfirmPw} />
+              <p className="text-xs" style={{ color: 'var(--text-3)' }}>12–16 chars · uppercase · lowercase · number · symbol</p>
+              <Button onClick={changePassword} size="sm" disabled={pwLoading}>{pwLoading ? 'Updating…' : 'Update password'}</Button>
+            </div>
+          </Card>
+        )}
 
         {/* Account */}
         {user && (

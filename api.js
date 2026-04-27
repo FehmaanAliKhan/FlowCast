@@ -84,6 +84,10 @@ const Api = (() => {
     return request('DELETE', '/api/data');
   }
 
+  async function changePassword(currentPassword, newPassword) {
+    return request('POST', '/api/auth/change-password', { currentPassword, newPassword });
+  }
+
   // ── Health ──────────────────────────────────────────────────────────────────
   async function ping() {
     try {
@@ -99,6 +103,7 @@ const Api = (() => {
     onUnauthenticated,
     register, login, logout,
     loadData, saveData, clearData,
+    changePassword,
     ping,
   };
 })();

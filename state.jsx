@@ -46,7 +46,7 @@ function reducer(state, action) {
       return { ...state, ui: { ...state.ui, drawerOpen: false, drawerContent: null } };
 
     case 'TOAST_ADD':
-      return { ...state, ui: { ...state.ui, toasts: [...state.ui.toasts, { id: newId('toast'), message: action.message, variant: action.variant || 'default' }] } };
+      return { ...state, ui: { ...state.ui, toasts: [...state.ui.toasts, { id: action.id || newId('toast'), message: action.message, variant: action.variant || 'default' }] } };
     case 'TOAST_REMOVE':
       return { ...state, ui: { ...state.ui, toasts: state.ui.toasts.filter(t => t.id !== action.id) } };
 
@@ -196,7 +196,7 @@ function StoreProvider({ children }) {
   // ── Toast helper ──────────────────────────────────────────────────────────
   const toast = useCallback((message, variant = 'default') => {
     const id = newId('toast');
-    rawDispatch({ type: 'TOAST_ADD', message, variant });
+    rawDispatch({ type: 'TOAST_ADD', id, message, variant });
     setTimeout(() => rawDispatch({ type: 'TOAST_REMOVE', id }), 3200);
   }, []);
 

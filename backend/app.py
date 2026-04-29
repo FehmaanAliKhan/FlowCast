@@ -211,7 +211,7 @@ def change_password():
     db  = get_db()
     row = db.execute(text('SELECT password_hash FROM users WHERE id = :uid'), {'uid': g.user_id}).mappings().fetchone()
     if not row or not bcrypt.checkpw(current_password.encode(), row['password_hash'].encode()):
-        return jsonify({'error': 'Current password is incorrect'}), 401
+        return jsonify({'error': 'Current password is incorrect'}), 400
     if len(new_password) < 12 or len(new_password) > 16:
         return jsonify({'error': 'Password must be 12–16 characters long'}), 400
     if not re.search(r'[A-Z]', new_password): return jsonify({'error': 'Password must contain an uppercase letter'}), 400

@@ -20,7 +20,7 @@ const Api = (() => {
   function onUnauthenticated(cb) { _onUnauth = cb; }
 
   // ── Core fetch wrapper ──────────────────────────────────────────────────────
-  async function request(method, path, body) {
+  async function request(method, path, body, opts = {}) {
     const headers = { 'Content-Type': 'application/json' };
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -37,9 +37,11 @@ const Api = (() => {
     }
 
     if (res.status === 401) {
-      clearToken();
-      if (_onUnauth) _onUnauth();
       const err = await res.json().catch(() => ({}));
+      if (!opts.skipUnauth) {
+        clearToken();
+        if (_onUnauth) _onUnauth();
+      }
       throw new Error(err.error || 'Session expired');
     }
 
@@ -53,14 +55,14 @@ const Api = (() => {
 
   // ── Auth ────────────────────────────────────────────────────────────────────
   async function register(email, password) {
-    const data = await request('POST', '/api/auth/register', { email, password });
+    const data = await request('POST', '/api/auth/register', { email, password }, { skipUnauth: true });
     setToken(data.token);
     setUser(data.user);
     return data;
   }
 
   async function login(email, password) {
-    const data = await request('POST', '/api/auth/login', { email, password });
+    const data = await request('POST', '/api/auth/login', { email, password }, { skipUnauth: true });
     setToken(data.token);
     setUser(data.user);
     return data;

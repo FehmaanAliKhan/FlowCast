@@ -311,7 +311,7 @@ function KPIStrip() {
 
   const kpis = [
     {
-      label: 'Income this month', accent: '#10B981',
+      label: 'Months of Runway', accent: '#10B981',
       value: <BigMoney cents={thisStats.income} />,
       sub: incomeDelta !== null
         ? <span className="flex items-center gap-1.5"><DeltaBadge value={incomeDelta} /><span>vs last month</span></span>
